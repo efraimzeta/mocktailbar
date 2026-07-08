@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MocktailBar</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MocktailBar">
+<meta name="theme-color" content="#0C1018">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0C1018; color: #F2E8D9; font-family: Georgia, serif; max-width: 760px; margin: 0 auto; }
+  header { padding: calc(24px + env(safe-area-inset-top, 16px)) 20px 24px; border-bottom: 1px solid #2A2F3A; }
+  .eyebrow { color: #9A8870; font-size: 12px; font-family: sans-serif; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 6px; }
+  h1 { font-size: 30px; font-weight: normal; margin-bottom: 4px; }
+  .sub { color: #7A7060; font-size: 14px; font-family: sans-serif; }
+  #progress { color: #E8A838; font-size: 13px; font-family: sans-serif; margin-top: 10px; }
+
+  .controls { padding: 18px 20px 4px; }
+  #search { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #2A2F3A;
+    background: #161C28; color: #F2E8D9; font-size: 15px; font-family: sans-serif; outline: none; margin-bottom: 14px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 14px; border-radius: 999px; border: 1px solid #2A2F3A; background: transparent;
+    color: #9A8870; font-size: 12px; font-family: sans-serif; cursor: pointer; }
+  .filter-btn.active { background: #E8A838; border-color: #E8A838; color: #0C1018; font-weight: 600; }
+
+  main { padding: 14px 20px 30px; }
+  details.drink { background: #161C28; border: 1px solid #232A38; border-radius: 12px; margin-bottom: 10px; overflow: hidden; position: relative; }
+  details.drink.hidden { display: none; }
+  summary { display: flex; align-items: center; gap: 12px; padding: 16px; cursor: pointer; list-style: none; position: relative; }
+  summary::-webkit-details-marker { display: none; }
+  .bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .emoji { font-size: 26px; flex-shrink: 0; }
+  .head { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+  .dname { font-size: 17px; }
+  .dcat { font-size: 10px; font-family: sans-serif; letter-spacing: 0.5px; text-transform: uppercase; }
+  .dglass { font-size: 11px; font-family: sans-serif; color: #4A5060; }
+  .badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .tested-badge { color: #5BAA78; font-family: sans-serif; font-size: 14px; font-weight: 700; }
+  .stars-badge { color: #E8A838; font-size: 12px; letter-spacing: 1px; }
+  .chev { color: #4A5060; transition: transform 0.2s; flex-shrink: 0; }
+  details[open] .chev { transform: rotate(180deg); }
+
+  .body { padding: 4px 16px 18px; }
+  .track { display: flex; align-items: center; gap: 16px; padding: 12px 0 2px; border-bottom: 1px dashed #232A38; margin-bottom: 4px; flex-wrap: wrap; }
+  .tested-btn { padding: 7px 16px; border-radius: 999px; border: 1px solid #2A3A2E; background: transparent;
+    color: #6A8070; font-family: sans-serif; font-size: 13px; cursor: pointer; }
+  .tested-btn.on { background: #1E3A28; border-color: #5BAA78; color: #7ACB98; font-weight: 600; }
+  .rating { display: flex; gap: 2px; }
+  .star { background: none; border: none; font-size: 24px; color: #2A2F3A; cursor: pointer; padding: 2px; line-height: 1; }
+  .star.on { color: #E8A838; }
+  .label { font-size: 11px; font-family: sans-serif; color: #9A8870; letter-spacing: 2px; text-transform: uppercase; margin: 14px 0 10px; }
+  .ing-box { background: #0C1018; border: 1px solid #1E2430; border-radius: 10px; overflow: hidden; }
+  .ing-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; border-bottom: 1px solid #1A2030; }
+  .ing-row:last-child { border-bottom: none; }
+  .ing-name { font-family: sans-serif; font-size: 14px; color: #C8B89A; }
+  .ing-amount { font-family: sans-serif; font-size: 13px; font-weight: 600; white-space: nowrap; margin-left: 12px; }
+  .step-row { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; }
+  .step-num { min-width: 24px; height: 24px; border-radius: 50%; border: 1px solid; display: flex; align-items: center;
+    justify-content: center; font-size: 11px; font-family: sans-serif; font-weight: 600; flex-shrink: 0; }
+  .step-text { font-family: sans-serif; font-size: 14px; color: #C8B89A; line-height: 1.5; }
+  .tip { background: #0C1018; border-radius: 8px; padding: 12px 14px; margin-top: 14px; }
+  .tip-label { font-size: 10px; font-family: sans-serif; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 5px; }
+  .tip-text { font-family: sans-serif; font-size: 13px; color: #9A8870; line-height: 1.5; }
+  .orig { margin-top: 18px; padding-top: 4px; border-top: 1px dashed #2A2F3A; }
+  .orig-box { border-color: #2A2418; }
+  .orig-note { font-family: sans-serif; font-size: 12px; color: #7A6A50; line-height: 1.5; margin-top: 8px; font-style: italic; }
+
+  footer { margin: 0 20px 16px; padding: 14px 16px; background: #131822; border: 1px solid #1E2430; border-radius: 10px; }
+  footer:last-of-type { margin-bottom: 40px; }
+  .f-label { font-size: 11px; font-family: sans-serif; color: #E8A838; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .f-text { font-family: sans-serif; font-size: 13px; color: #6A6050; line-height: 1.5; }
+
+  @media print {
+    body { background: #fff; color: #111; }
+    .controls, .track, #progress { display: none; }
+    details.drink { border-color: #ccc; background: #fff; page-break-inside: avoid; }
+    details.drink > .body { display: block !important; }
+    .ing-box { background: #fff; border-color: #ccc; }
+    .ing-row { border-color: #eee; }
+    .ing-name, .step-text { color: #333; }
+    .tip { background: #fafafa; }
+    .tip-text, .orig-note { color: #555; }
+    .chev, .badges { display: none; }
+    header { border-color: #ccc; }
+    footer { background: #fafafa; border-color: #ccc; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Sommarens drinkset</p>
+  <h1>40 Mocktail-klassiker</h1>
+  <p class="sub">Alkoholfritt · Veganskt · Vardagliga ingredienser · Europeiska mått · Med originalrecepten</p>
+  <p id="progress"></p>
+</header>
+
+<div class="controls">
+  <input id="search" type="text" placeholder="Sök drink...">
+  <div class="filters">
+    <button class="filter-btn active" data-cat="Alla">Alla</button>
+    <button class="filter-btn" data-cat="Citrus & Fräsch">Citrus &amp; Fräsch</button>
+    <button class="filter-btn" data-cat="Bär & Frukt">Bär &amp; Frukt</button>
+    <button class="filter-btn" data-cat="Tropisk">Tropisk</button>
+    <button class="filter-btn" data-cat="Kryddig & Komplex">Kryddig &amp; Komplex</button>
+    <button class="filter-btn" data-cat="__tested">✓ Testade</button>
+    <button class="filter-btn" data-cat="__untested">Otestade</button>
+  </div>
+</div>
+
+<main>
+
+<details class="drink" data-id="1" data-cat="Citrus &amp; Fräsch" data-name="mojito">
+  <summary>
+    <span class="bar" style="background:#4DAA72"></span>
+    <span class="emoji">🌿</span>
+    <span class="head">
+      <span class="dname">Mojito</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">limejuice (ca 1 lime)</span><span class="ing-amount" style="color:#4DAA72">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#4DAA72">15 ml</span></div><div class="ing-row"><span class="ing-name">mintblad</span><span class="ing-amount" style="color:#4DAA72">8–10 st</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#4DAA72">120 ml</span></div><div class="ing-row"><span class="ing-name">krossad is</span><span class="ing-amount" style="color:#4DAA72">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#4DAA7222;border-color:#4DAA7255;color:#4DAA72">1</div><p class="step-text">Lägg mintblad i glaset och tryck försiktigt med en sked (muddla) för att frisätta oljan.</p></div><div class="step-row"><div class="step-num" style="background:#4DAA7222;border-color:#4DAA7255;color:#4DAA72">2</div><p class="step-text">Häll i limejuice och sockerlag.</p></div><div class="step-row"><div class="step-num" style="background:#4DAA7222;border-color:#4DAA7255;color:#4DAA72">3</div><p class="step-text">Fyll glaset med krossad is.</p></div><div class="step-row"><div class="step-num" style="background:#4DAA7222;border-color:#4DAA7255;color:#4DAA72">4</div><p class="step-text">Toppa med sodavatten och rör om försiktigt.</p></div><div class="step-row"><div class="step-num" style="background:#4DAA7222;border-color:#4DAA7255;color:#4DAA72">5</div><p class="step-text">Garnera med en limeskiva och en kvist mint.</p></div></div>
+    <div class="tip" style="border:1px solid #4DAA7233;border-left:3px solid #4DAA72">
+      <p class="tip-label" style="color:#4DAA72">💡 Tips</p>
+      <p class="tip-text">Sockerlag: lös 1 dl socker i 1 dl hett vatten. Förvaras i flaska i kylen i 2–3 veckor.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">ljus rom</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">mintblad</span><span class="ing-amount" style="color:#B8935A">8–10 st</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#B8935A">Toppa</span></div></div>
+      <p class="orig-note">Kubansk klassiker från Havanna. Romen shakas inte — allt byggs direkt i glaset.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="2" data-cat="Citrus &amp; Fräsch" data-name="margarita">
+  <summary>
+    <span class="bar" style="background:#E8C238"></span>
+    <span class="emoji">🍋</span>
+    <span class="head">
+      <span class="dname">Margarita</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Margarita / Coupe</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">limejuice (1,5 lime)</span><span class="ing-amount" style="color:#E8C238">50 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#E8C238">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#E8C238">15 ml</span></div><div class="ing-row"><span class="ing-name">flingsalt (saltrand)</span><span class="ing-amount" style="color:#E8C238">1 nypa</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E8C238">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8C23822;border-color:#E8C23855;color:#E8C238">1</div><p class="step-text">Gnid lime längs glasets kant och doppa i salt för en saltrand.</p></div><div class="step-row"><div class="step-num" style="background:#E8C23822;border-color:#E8C23855;color:#E8C238">2</div><p class="step-text">Shaka limejuice, apelsinjuice och sockerlag med rikligt med is i ca 15 sekunder.</p></div><div class="step-row"><div class="step-num" style="background:#E8C23822;border-color:#E8C23855;color:#E8C238">3</div><p class="step-text">Sila ner i glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#E8C23822;border-color:#E8C23855;color:#E8C238">4</div><p class="step-text">Garnera med en limeskiva på kanten.</p></div></div>
+    <div class="tip" style="border:1px solid #E8C23833;border-left:3px solid #E8C238">
+      <p class="tip-label" style="color:#E8C238">💡 Tips</p>
+      <p class="tip-text">Vill du ha frozen margarita? Blanda allt i en blender med rikligt med is.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">tequila (blanco)</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">Cointreau/triple sec</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div><div class="ing-row"><span class="ing-name">salt på kanten</span><span class="ing-amount" style="color:#B8935A">1 nypa</span></div></div>
+      <p class="orig-note">En av världens mest beställda cocktails. Apelsinlikören ersätts av apelsinjuice i mocktailen.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="3" data-cat="Bär &amp; Frukt" data-name="cosmopolitan">
+  <summary>
+    <span class="bar" style="background:#D4547A"></span>
+    <span class="emoji">🍒</span>
+    <span class="head">
+      <span class="dname">Cosmopolitan</span>
+      <span class="dcat" style="color:#C4547A">Bär &amp; Frukt</span>
+      <span class="dglass">🥃 Martiniglas / Coupe</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">tranbärsjuice</span><span class="ing-amount" style="color:#D4547A">60 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#D4547A">25 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#D4547A">25 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#D4547A">10 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#D4547A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#D4547A22;border-color:#D4547A55;color:#D4547A">1</div><p class="step-text">Häll alla ingredienser i en shaker med rikligt med is.</p></div><div class="step-row"><div class="step-num" style="background:#D4547A22;border-color:#D4547A55;color:#D4547A">2</div><p class="step-text">Shaka kraftigt i 15 sekunder.</p></div><div class="step-row"><div class="step-num" style="background:#D4547A22;border-color:#D4547A55;color:#D4547A">3</div><p class="step-text">Sila ner i ett kylt glas utan is.</p></div><div class="step-row"><div class="step-num" style="background:#D4547A22;border-color:#D4547A55;color:#D4547A">4</div><p class="step-text">Garnera med en limeskiva eller ett vridet citronskal.</p></div></div>
+    <div class="tip" style="border:1px solid #D4547A33;border-left:3px solid #D4547A">
+      <p class="tip-label" style="color:#D4547A">💡 Tips</p>
+      <p class="tip-text">Kyl glaset i frysen en stund innan servering för extra elegans.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">citronvodka</span><span class="ing-amount" style="color:#B8935A">40 ml</span></div><div class="ing-row"><span class="ing-name">Cointreau</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">tranbärsjuice</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div></div>
+      <p class="orig-note">Ikonisk 90-talsdrink, känd från Sex and the City.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="4" data-cat="Citrus &amp; Fräsch" data-name="daiquiri">
+  <summary>
+    <span class="bar" style="background:#E8C238"></span>
+    <span class="emoji">🍈</span>
+    <span class="head">
+      <span class="dname">Daiquiri</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Coupe / Martiniglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">limejuice (2 limefrukter)</span><span class="ing-amount" style="color:#E8C238">60 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#E8C238">20 ml</span></div><div class="ing-row"><span class="ing-name">krossad is</span><span class="ing-amount" style="color:#E8C238">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8C23822;border-color:#E8C23855;color:#E8C238">1</div><p class="step-text">Häll limejuice och sockerlag i en shaker med rikligt med krossad is.</p></div><div class="step-row"><div class="step-num" style="background:#E8C23822;border-color:#E8C23855;color:#E8C238">2</div><p class="step-text">Shaka kraftigt i 15–20 sekunder tills shakern är riktigt kall.</p></div><div class="step-row"><div class="step-num" style="background:#E8C23822;border-color:#E8C23855;color:#E8C238">3</div><p class="step-text">Sila ner i ett kylt glas.</p></div><div class="step-row"><div class="step-num" style="background:#E8C23822;border-color:#E8C23855;color:#E8C238">4</div><p class="step-text">Garnera med en limeskiva.</p></div></div>
+    <div class="tip" style="border:1px solid #E8C23833;border-left:3px solid #E8C238">
+      <p class="tip-label" style="color:#E8C238">💡 Tips</p>
+      <p class="tip-text">Klassisk daiquiri är enkel men kräver bra limejuice — pressa alltid färsk.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">ljus rom</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div></div>
+      <p class="orig-note">Hemingways favorit. Bara tre ingredienser — balansen är allt.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="5" data-cat="Tropisk" data-name="piña colada">
+  <summary>
+    <span class="bar" style="background:#E8A838"></span>
+    <span class="emoji">🍍</span>
+    <span class="head">
+      <span class="dname">Piña Colada</span>
+      <span class="dcat" style="color:#E8A038">Tropisk</span>
+      <span class="dglass">🥃 Highball / Hurricanglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">ananasjuice</span><span class="ing-amount" style="color:#E8A838">120 ml</span></div><div class="ing-row"><span class="ing-name">kokosmjölk (från burk)</span><span class="ing-amount" style="color:#E8A838">60 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#E8A838">10 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E8A838">2 nävar</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8A83822;border-color:#E8A83855;color:#E8A838">1</div><p class="step-text">Häll ananasjuice, kokosmjölk, sockerlag och is i en blender.</p></div><div class="step-row"><div class="step-num" style="background:#E8A83822;border-color:#E8A83855;color:#E8A838">2</div><p class="step-text">Mixa på hög effekt tills konsistensen är slät och krämig.</p></div><div class="step-row"><div class="step-num" style="background:#E8A83822;border-color:#E8A83855;color:#E8A838">3</div><p class="step-text">Häll i glaset och garnera med ananasbit och ett körsbär.</p></div></div>
+    <div class="tip" style="border:1px solid #E8A83833;border-left:3px solid #E8A838">
+      <p class="tip-label" style="color:#E8A838">💡 Tips</p>
+      <p class="tip-text">Kokosmjölk ger mer smak och krämighet än kokosvatten. Skaka burken väl.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vit rom</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">ananasjuice</span><span class="ing-amount" style="color:#B8935A">90 ml</span></div><div class="ing-row"><span class="ing-name">kokoskräm (t.ex. Coco Lopez)</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div></div>
+      <p class="orig-note">Puerto Ricos nationaldrink sedan 1978.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="6" data-cat="Citrus &amp; Fräsch" data-name="aperol spritz">
+  <summary>
+    <span class="bar" style="background:#E8662A"></span>
+    <span class="emoji">🍊</span>
+    <span class="head">
+      <span class="dname">Aperol Spritz</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Vinglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">apelsinjuice (gärna blodapelsin)</span><span class="ing-amount" style="color:#E8662A">80 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#E8662A">15 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#E8662A">5 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#E8662A">100 ml</span></div><div class="ing-row"><span class="ing-name">apelsin</span><span class="ing-amount" style="color:#E8662A">1 skiva</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E8662A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8662A22;border-color:#E8662A55;color:#E8662A">1</div><p class="step-text">Fyll ett stort vinglas med is.</p></div><div class="step-row"><div class="step-num" style="background:#E8662A22;border-color:#E8662A55;color:#E8662A">2</div><p class="step-text">Häll i apelsinjuice, citronsaft och sockerlag.</p></div><div class="step-row"><div class="step-num" style="background:#E8662A22;border-color:#E8662A55;color:#E8662A">3</div><p class="step-text">Toppa med sodavatten och rör om försiktigt en gång.</p></div><div class="step-row"><div class="step-num" style="background:#E8662A22;border-color:#E8662A55;color:#E8662A">4</div><p class="step-text">Garnera med en apelsinskiva.</p></div></div>
+    <div class="tip" style="border:1px solid #E8662A33;border-left:3px solid #E8662A">
+      <p class="tip-label" style="color:#E8662A">💡 Tips</p>
+      <p class="tip-text">Blodapelsin ger den perfekta orangeröda färgen som liknar Aperol. Finns som juice att köpa.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">Aperol</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">prosecco</span><span class="ing-amount" style="color:#B8935A">90 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#B8935A">Splash</span></div><div class="ing-row"><span class="ing-name">apelsin</span><span class="ing-amount" style="color:#B8935A">1 skiva</span></div></div>
+      <p class="orig-note">Italiensk aperitivo-klassiker. Receptet kallas 3-2-1: tre delar prosecco, två delar Aperol, en del soda.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="7" data-cat="Kryddig &amp; Komplex" data-name="moscow mule">
+  <summary>
+    <span class="bar" style="background:#9B7D4A"></span>
+    <span class="emoji">🫚</span>
+    <span class="head">
+      <span class="dname">Moscow Mule</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Kopparmugg / Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">ginger beer (ingefärsdryck)</span><span class="ing-amount" style="color:#9B7D4A">150 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#9B7D4A">25 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag (valfritt)</span><span class="ing-amount" style="color:#9B7D4A">5 ml</span></div><div class="ing-row"><span class="ing-name">mintblad</span><span class="ing-amount" style="color:#9B7D4A">6 st</span></div><div class="ing-row"><span class="ing-name">krossad is</span><span class="ing-amount" style="color:#9B7D4A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#9B7D4A22;border-color:#9B7D4A55;color:#9B7D4A">1</div><p class="step-text">Fyll glaset (gärna en kopparmugg) med krossad is.</p></div><div class="step-row"><div class="step-num" style="background:#9B7D4A22;border-color:#9B7D4A55;color:#9B7D4A">2</div><p class="step-text">Häll i limejuice och eventuellt sockerlag.</p></div><div class="step-row"><div class="step-num" style="background:#9B7D4A22;border-color:#9B7D4A55;color:#9B7D4A">3</div><p class="step-text">Toppa med ginger beer och rör om varsamt.</p></div><div class="step-row"><div class="step-num" style="background:#9B7D4A22;border-color:#9B7D4A55;color:#9B7D4A">4</div><p class="step-text">Garnera med mintblad och en limeskiva.</p></div></div>
+    <div class="tip" style="border:1px solid #9B7D4A33;border-left:3px solid #9B7D4A">
+      <p class="tip-label" style="color:#9B7D4A">💡 Tips</p>
+      <p class="tip-text">Ginger beer hittar du i välsorterade ICA/Coop. Fever-Tree eller Old Jamaica är bra märken.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vodka</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div><div class="ing-row"><span class="ing-name">ginger beer</span><span class="ing-amount" style="color:#B8935A">120 ml</span></div></div>
+      <p class="orig-note">Uppfanns i Los Angeles 1941 för att sälja vodka till amerikaner. Kopparmuggen är signaturen.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="8" data-cat="Kryddig &amp; Komplex" data-name="negroni">
+  <summary>
+    <span class="bar" style="background:#C43A3A"></span>
+    <span class="emoji">🍊</span>
+    <span class="head">
+      <span class="dname">Negroni</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Lowball / Tumbler</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">bitter lemon-läsk</span><span class="ing-amount" style="color:#C43A3A">80 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#C43A3A">40 ml</span></div><div class="ing-row"><span class="ing-name">granatäppeljuice</span><span class="ing-amount" style="color:#C43A3A">20 ml</span></div><div class="ing-row"><span class="ing-name">apelsin</span><span class="ing-amount" style="color:#C43A3A">1 skiva</span></div><div class="ing-row"><span class="ing-name">isbit</span><span class="ing-amount" style="color:#C43A3A">1 stor</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#C43A3A22;border-color:#C43A3A55;color:#C43A3A">1</div><p class="step-text">Fyll glaset med en stor isbit.</p></div><div class="step-row"><div class="step-num" style="background:#C43A3A22;border-color:#C43A3A55;color:#C43A3A">2</div><p class="step-text">Häll i apelsinjuice och granatäppeljuice.</p></div><div class="step-row"><div class="step-num" style="background:#C43A3A22;border-color:#C43A3A55;color:#C43A3A">3</div><p class="step-text">Toppa med bitter lemon och rör om 3–4 varv.</p></div><div class="step-row"><div class="step-num" style="background:#C43A3A22;border-color:#C43A3A55;color:#C43A3A">4</div><p class="step-text">Garnera med ett apelsinskal — vrid det ovanför glaset för att frisätta oljorna.</p></div></div>
+    <div class="tip" style="border:1px solid #C43A3A33;border-left:3px solid #C43A3A">
+      <p class="tip-label" style="color:#C43A3A">💡 Tips</p>
+      <p class="tip-text">Bitter lemon ger den karaktäristiska bitterheten. Fever-Tree Bitter Lemon rekommenderas.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">gin</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">Campari</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">söt röd vermouth</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div></div>
+      <p class="orig-note">Florens, 1919. Lika delar av allt, rörs med is. Bitter, stark och älskad av bartenders världen över.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="9" data-cat="Kryddig &amp; Komplex" data-name="old fashioned">
+  <summary>
+    <span class="bar" style="background:#9B5A2A"></span>
+    <span class="emoji">🍎</span>
+    <span class="head">
+      <span class="dname">Old Fashioned</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Lowball / Tumbler</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">äppeljuice (gärna mörk/ofiltrerad)</span><span class="ing-amount" style="color:#9B5A2A">100 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#9B5A2A">15 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag eller 1 tsk råsocker</span><span class="ing-amount" style="color:#9B5A2A">10 ml</span></div><div class="ing-row"><span class="ing-name">rivet apelsinskal</span><span class="ing-amount" style="color:#9B5A2A">2 skrap</span></div><div class="ing-row"><span class="ing-name">isbit</span><span class="ing-amount" style="color:#9B5A2A">1 stor</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#9B5A2A22;border-color:#9B5A2A55;color:#9B5A2A">1</div><p class="step-text">Lägg socker (eller häll sockerlag) i glaset.</p></div><div class="step-row"><div class="step-num" style="background:#9B5A2A22;border-color:#9B5A2A55;color:#9B5A2A">2</div><p class="step-text">Häll i äppel- och apelsinjuice och rör om tills sockret löst sig.</p></div><div class="step-row"><div class="step-num" style="background:#9B5A2A22;border-color:#9B5A2A55;color:#9B5A2A">3</div><p class="step-text">Lägg i en stor isbit.</p></div><div class="step-row"><div class="step-num" style="background:#9B5A2A22;border-color:#9B5A2A55;color:#9B5A2A">4</div><p class="step-text">Rör om i 30 sekunder med en barsked.</p></div><div class="step-row"><div class="step-num" style="background:#9B5A2A22;border-color:#9B5A2A55;color:#9B5A2A">5</div><p class="step-text">Garnera med en apelsinskiva och ett cocktailkörsbär.</p></div></div>
+    <div class="tip" style="border:1px solid #9B5A2A33;border-left:3px solid #9B5A2A">
+      <p class="tip-label" style="color:#9B5A2A">💡 Tips</p>
+      <p class="tip-text">En stor isbit smälter långsammare och späder ut drinken mindre. Bra investering för drinksetet.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">bourbon eller rye whiskey</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">sockerbit</span><span class="ing-amount" style="color:#B8935A">1 st</span></div><div class="ing-row"><span class="ing-name">Angostura bitters</span><span class="ing-amount" style="color:#B8935A">2–3 stänk</span></div><div class="ing-row"><span class="ing-name">apelsinskal</span><span class="ing-amount" style="color:#B8935A">1 st</span></div></div>
+      <p class="orig-note">En av världens äldsta cocktails (1880-tal). Definitionen av en cocktail: sprit, socker, bitters, vatten.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="10" data-cat="Citrus &amp; Fräsch" data-name="gin &amp; tonic">
+  <summary>
+    <span class="bar" style="background:#5BA88A"></span>
+    <span class="emoji">🥒</span>
+    <span class="head">
+      <span class="dname">Gin &amp; Tonic</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Ballongglas / Copa</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">tonic water</span><span class="ing-amount" style="color:#5BA88A">200 ml</span></div><div class="ing-row"><span class="ing-name">gurka</span><span class="ing-amount" style="color:#5BA88A">3 skivor</span></div><div class="ing-row"><span class="ing-name">lime</span><span class="ing-amount" style="color:#5BA88A">2 skivor</span></div><div class="ing-row"><span class="ing-name">rosmarin eller timjan</span><span class="ing-amount" style="color:#5BA88A">2 kvistar</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#5BA88A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#5BA88A22;border-color:#5BA88A55;color:#5BA88A">1</div><p class="step-text">Fyll ett stort ballongglas med is.</p></div><div class="step-row"><div class="step-num" style="background:#5BA88A22;border-color:#5BA88A55;color:#5BA88A">2</div><p class="step-text">Lägg i gurkskivor, limeskivor och en rosmarinkvist.</p></div><div class="step-row"><div class="step-num" style="background:#5BA88A22;border-color:#5BA88A55;color:#5BA88A">3</div><p class="step-text">Häll i tonic water längs sidan av glaset.</p></div><div class="step-row"><div class="step-num" style="background:#5BA88A22;border-color:#5BA88A55;color:#5BA88A">4</div><p class="step-text">Rör försiktigt ett varv och servera genast.</p></div></div>
+    <div class="tip" style="border:1px solid #5BA88A33;border-left:3px solid #5BA88A">
+      <p class="tip-label" style="color:#5BA88A">💡 Tips</p>
+      <p class="tip-text">Välj en tonic du gillar smaken av — det är basen. Fever-Tree Indian Tonic är klassikern.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">gin</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">tonic water</span><span class="ing-amount" style="color:#B8935A">150 ml</span></div><div class="ing-row"><span class="ing-name">lime eller gurka</span><span class="ing-amount" style="color:#B8935A">1 skiva</span></div></div>
+      <p class="orig-note">Föddes i brittiska Indien — kinin i tonicen skyddade mot malaria, ginen gjorde det drickbart.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="11" data-cat="Citrus &amp; Fräsch" data-name="caipirinha">
+  <summary>
+    <span class="bar" style="background:#7CC248"></span>
+    <span class="emoji">🍋</span>
+    <span class="head">
+      <span class="dname">Caipirinha</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Lowball / Tumbler</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">lime (skuren i 8 bitar)</span><span class="ing-amount" style="color:#7CC248">1 hel</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#7CC248">20 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#7CC248">80 ml</span></div><div class="ing-row"><span class="ing-name">krossad is</span><span class="ing-amount" style="color:#7CC248">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#7CC24822;border-color:#7CC24855;color:#7CC248">1</div><p class="step-text">Lägg limebitar i glaset och häll på sockerlag.</p></div><div class="step-row"><div class="step-num" style="background:#7CC24822;border-color:#7CC24855;color:#7CC248">2</div><p class="step-text">Muddla (tryck och vrid) med en barsked eller liknande för att pressa ut juicen.</p></div><div class="step-row"><div class="step-num" style="background:#7CC24822;border-color:#7CC24855;color:#7CC248">3</div><p class="step-text">Fyll med krossad is.</p></div><div class="step-row"><div class="step-num" style="background:#7CC24822;border-color:#7CC24855;color:#7CC248">4</div><p class="step-text">Toppa med sodavatten och rör om.</p></div></div>
+    <div class="tip" style="border:1px solid #7CC24833;border-left:3px solid #7CC248">
+      <p class="tip-label" style="color:#7CC248">💡 Tips</p>
+      <p class="tip-text">Originalets ruffiga charm kommer från att pressa limen direkt i glaset. Muddla ordentligt.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">cachaça (brasiliansk sockerrörssprit)</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">lime i bitar</span><span class="ing-amount" style="color:#B8935A">1 hel</span></div><div class="ing-row"><span class="ing-name">råsocker</span><span class="ing-amount" style="color:#B8935A">2 tsk</span></div></div>
+      <p class="orig-note">Brasiliens nationaldrink. Ingen soda i originalet — bara cachaça, lime och socker.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="12" data-cat="Bär &amp; Frukt" data-name="sex on the beach">
+  <summary>
+    <span class="bar" style="background:#E8662A"></span>
+    <span class="emoji">🍑</span>
+    <span class="head">
+      <span class="dname">Sex on the Beach</span>
+      <span class="dcat" style="color:#C4547A">Bär &amp; Frukt</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#E8662A">60 ml</span></div><div class="ing-row"><span class="ing-name">tranbärsjuice</span><span class="ing-amount" style="color:#E8662A">60 ml</span></div><div class="ing-row"><span class="ing-name">aprikos- eller persikonektar (t.ex. Bravo)</span><span class="ing-amount" style="color:#E8662A">60 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E8662A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8662A22;border-color:#E8662A55;color:#E8662A">1</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#E8662A22;border-color:#E8662A55;color:#E8662A">2</div><p class="step-text">Häll i apelsinjuice och aprikosnektar.</p></div><div class="step-row"><div class="step-num" style="background:#E8662A22;border-color:#E8662A55;color:#E8662A">3</div><p class="step-text">Häll i tranbärsjuice sist — den sjunker ner och skapar ett lager.</p></div><div class="step-row"><div class="step-num" style="background:#E8662A22;border-color:#E8662A55;color:#E8662A">4</div><p class="step-text">Garnera med en apelsinskiva och ett körsbär.</p></div></div>
+    <div class="tip" style="border:1px solid #E8662A33;border-left:3px solid #E8662A">
+      <p class="tip-label" style="color:#E8662A">💡 Tips</p>
+      <p class="tip-text">Aprikosnektar (Bravo) finns i nästan alla butiker och smakar snarlikt. Alternativ: mixa konserverade persikor med lite av spadet.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vodka</span><span class="ing-amount" style="color:#B8935A">40 ml</span></div><div class="ing-row"><span class="ing-name">persikolikör</span><span class="ing-amount" style="color:#B8935A">20 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">tranbärsjuice</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div></div>
+      <p class="orig-note">80-talsklassiker från Florida.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="13" data-cat="Bär &amp; Frukt" data-name="tequila sunrise">
+  <summary>
+    <span class="bar" style="background:#E87A1A"></span>
+    <span class="emoji">🌅</span>
+    <span class="head">
+      <span class="dname">Tequila Sunrise</span>
+      <span class="dcat" style="color:#C4547A">Bär &amp; Frukt</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">apelsinjuice (färskpressad)</span><span class="ing-amount" style="color:#E87A1A">150 ml</span></div><div class="ing-row"><span class="ing-name">grenadine (granatäppelsirap)</span><span class="ing-amount" style="color:#E87A1A">20 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E87A1A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E87A1A22;border-color:#E87A1A55;color:#E87A1A">1</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#E87A1A22;border-color:#E87A1A55;color:#E87A1A">2</div><p class="step-text">Häll i apelsinjuice.</p></div><div class="step-row"><div class="step-num" style="background:#E87A1A22;border-color:#E87A1A55;color:#E87A1A">3</div><p class="step-text">Häll grenadinen långsamt längs kanten eller via en barsked — den ska sjunka till botten.</p></div><div class="step-row"><div class="step-num" style="background:#E87A1A22;border-color:#E87A1A55;color:#E87A1A">4</div><p class="step-text">Rör inte! Servera genast med ett sugrör.</p></div></div>
+    <div class="tip" style="border:1px solid #E87A1A33;border-left:3px solid #E87A1A">
+      <p class="tip-label" style="color:#E87A1A">💡 Tips</p>
+      <p class="tip-text">Grenadine finns hos de flesta större matbutiker (ICA Maxi, Coop). Annars: granatäppeljuice + socker.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">tequila</span><span class="ing-amount" style="color:#B8935A">45 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#B8935A">90 ml</span></div><div class="ing-row"><span class="ing-name">grenadine</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div></div>
+      <p class="orig-note">Gjordes berömd av Rolling Stones turné 1972 och Eagles låt med samma namn.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="14" data-cat="Bär &amp; Frukt" data-name="bellini">
+  <summary>
+    <span class="bar" style="background:#F4A8A0"></span>
+    <span class="emoji">🍑</span>
+    <span class="head">
+      <span class="dname">Bellini</span>
+      <span class="dcat" style="color:#C4547A">Bär &amp; Frukt</span>
+      <span class="dglass">🥃 Champagneglas / Flöjt</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">aprikos- eller persikonektar</span><span class="ing-amount" style="color:#F4A8A0">80 ml</span></div><div class="ing-row"><span class="ing-name">mousserande äppeljuice eller sodavatten</span><span class="ing-amount" style="color:#F4A8A0">120 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#F4A8A0">5 ml</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#F4A8A022;border-color:#F4A8A055;color:#F4A8A0">1</div><p class="step-text">Häll nektarn i ett kylt champagneglas.</p></div><div class="step-row"><div class="step-num" style="background:#F4A8A022;border-color:#F4A8A055;color:#F4A8A0">2</div><p class="step-text">Tillsätt citronsaften.</p></div><div class="step-row"><div class="step-num" style="background:#F4A8A022;border-color:#F4A8A055;color:#F4A8A0">3</div><p class="step-text">Häll försiktigt i mousserande äppeljuice eller sodavatten längs sidan av glaset.</p></div><div class="step-row"><div class="step-num" style="background:#F4A8A022;border-color:#F4A8A055;color:#F4A8A0">4</div><p class="step-text">Rör försiktigt ett halvt varv och servera.</p></div></div>
+    <div class="tip" style="border:1px solid #F4A8A033;border-left:3px solid #F4A8A0">
+      <p class="tip-label" style="color:#F4A8A0">💡 Tips</p>
+      <p class="tip-text">Mousserande äppeljuice (t.ex. Kiviks) ger mest festkänsla. Sodavatten funkar fint också.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">prosecco</span><span class="ing-amount" style="color:#B8935A">100 ml</span></div><div class="ing-row"><span class="ing-name">vit persikopuré</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div></div>
+      <p class="orig-note">Skapad på Harry's Bar i Venedig ca 1948, uppkallad efter renässansmålaren Giovanni Bellini.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="15" data-cat="Citrus &amp; Fräsch" data-name="hugo">
+  <summary>
+    <span class="bar" style="background:#6DB87A"></span>
+    <span class="emoji">🌸</span>
+    <span class="head">
+      <span class="dname">Hugo</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Vinglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">flädersaft (koncentrerad)</span><span class="ing-amount" style="color:#6DB87A">30 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#6DB87A">20 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#6DB87A">120 ml</span></div><div class="ing-row"><span class="ing-name">mintblad</span><span class="ing-amount" style="color:#6DB87A">6 st</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#6DB87A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#6DB87A22;border-color:#6DB87A55;color:#6DB87A">1</div><p class="step-text">Fyll ett stort vinglas med is.</p></div><div class="step-row"><div class="step-num" style="background:#6DB87A22;border-color:#6DB87A55;color:#6DB87A">2</div><p class="step-text">Häll i flädersaft och limejuice.</p></div><div class="step-row"><div class="step-num" style="background:#6DB87A22;border-color:#6DB87A55;color:#6DB87A">3</div><p class="step-text">Toppa med sodavatten.</p></div><div class="step-row"><div class="step-num" style="background:#6DB87A22;border-color:#6DB87A55;color:#6DB87A">4</div><p class="step-text">Lägg i mintblad och rör om försiktigt.</p></div><div class="step-row"><div class="step-num" style="background:#6DB87A22;border-color:#6DB87A55;color:#6DB87A">5</div><p class="step-text">Garnera med en limeskiva och extra mint.</p></div></div>
+    <div class="tip" style="border:1px solid #6DB87A33;border-left:3px solid #6DB87A">
+      <p class="tip-label" style="color:#6DB87A">💡 Tips</p>
+      <p class="tip-text">Flädersaft finns i de flesta mataffärer, t.ex. IKEA, ICA eller Coop.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">prosecco</span><span class="ing-amount" style="color:#B8935A">100 ml</span></div><div class="ing-row"><span class="ing-name">flädersirap</span><span class="ing-amount" style="color:#B8935A">20 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#B8935A">Toppa</span></div><div class="ing-row"><span class="ing-name">mintblad</span><span class="ing-amount" style="color:#B8935A">6 st</span></div></div>
+      <p class="orig-note">Relativt ny klassiker — uppfanns i Sydtyrolen 2005 och spred sig blixtsnabbt över Europa.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="16" data-cat="Citrus &amp; Fräsch" data-name="tom collins">
+  <summary>
+    <span class="bar" style="background:#E8D838"></span>
+    <span class="emoji">🍋</span>
+    <span class="head">
+      <span class="dname">Tom Collins</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Highball / Collins</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">citronsaft (ca 1,5 citron)</span><span class="ing-amount" style="color:#E8D838">45 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#E8D838">20 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#E8D838">150 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E8D838">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8D83822;border-color:#E8D83855;color:#E8D838">1</div><p class="step-text">Häll citronsaft och sockerlag i glaset och rör om.</p></div><div class="step-row"><div class="step-num" style="background:#E8D83822;border-color:#E8D83855;color:#E8D838">2</div><p class="step-text">Fyll med is.</p></div><div class="step-row"><div class="step-num" style="background:#E8D83822;border-color:#E8D83855;color:#E8D838">3</div><p class="step-text">Toppa med sodavatten och rör om försiktigt.</p></div><div class="step-row"><div class="step-num" style="background:#E8D83822;border-color:#E8D83855;color:#E8D838">4</div><p class="step-text">Garnera med en citronskiva och ett cocktailkörsbär.</p></div></div>
+    <div class="tip" style="border:1px solid #E8D83833;border-left:3px solid #E8D838">
+      <p class="tip-label" style="color:#E8D838">💡 Tips</p>
+      <p class="tip-text">En av de enklaste och mest uppfriskande drinkarna. Bra bas för att lära sig balansen surt/sött.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">gin</span><span class="ing-amount" style="color:#B8935A">45 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#B8935A">Toppa</span></div></div>
+      <p class="orig-note">1800-talsklassiker uppkallad efter ett practical joke i New York 1874 ('Har du sett Tom Collins?'). I grunden en kolsyrad gin-lemonad.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="17" data-cat="Kryddig &amp; Komplex" data-name="whiskey sour">
+  <summary>
+    <span class="bar" style="background:#D49A38"></span>
+    <span class="emoji">🍊</span>
+    <span class="head">
+      <span class="dname">Whiskey Sour</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Lowball / Coupe</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#D49A38">45 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#D49A38">20 ml</span></div><div class="ing-row"><span class="ing-name">aquafaba — kikärtsspad (valfritt, för skum)</span><span class="ing-amount" style="color:#D49A38">30 ml</span></div><div class="ing-row"><span class="ing-name">äppeljuice</span><span class="ing-amount" style="color:#D49A38">30 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#D49A38">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#D49A3822;border-color:#D49A3855;color:#D49A38">1</div><p class="step-text">Dry shake (utan is): häll citronsaft, sockerlag, äppeljuice och ev. aquafaba i shakern och shaka kraftigt i 15 sek.</p></div><div class="step-row"><div class="step-num" style="background:#D49A3822;border-color:#D49A3855;color:#D49A38">2</div><p class="step-text">Öppna shakern, tillsätt rikligt med is och shaka igen i 15 sek.</p></div><div class="step-row"><div class="step-num" style="background:#D49A3822;border-color:#D49A3855;color:#D49A38">3</div><p class="step-text">Sila ner i glaset.</p></div><div class="step-row"><div class="step-num" style="background:#D49A3822;border-color:#D49A3855;color:#D49A38">4</div><p class="step-text">Garnera med en apelsinskiva och ett cocktailkörsbär. Droppa gärna lite granatäppelsirap på skummet.</p></div></div>
+    <div class="tip" style="border:1px solid #D49A3833;border-left:3px solid #D49A38">
+      <p class="tip-label" style="color:#D49A38">💡 Tips</p>
+      <p class="tip-text">Aquafaba = spadet från en burk kikärtor. Ger ett krämigt, veganskt skum — 30 ml räcker. Resten av spadet håller några dagar i kylen.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">bourbon</span><span class="ing-amount" style="color:#B8935A">45 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">äggvita (valfritt)</span><span class="ing-amount" style="color:#B8935A">1 st</span></div></div>
+      <p class="orig-note">Sour-familjens urfader: sprit + citrus + socker. Med äggvita kallas den Boston Sour.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="18" data-cat="Bär &amp; Frukt" data-name="sangria">
+  <summary>
+    <span class="bar" style="background:#9B2A2A"></span>
+    <span class="emoji">🍇</span>
+    <span class="head">
+      <span class="dname">Sangria</span>
+      <span class="dcat" style="color:#C4547A">Bär &amp; Frukt</span>
+      <span class="dglass">🥃 Kanna + Glas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">röd eller mörk druvjuice</span><span class="ing-amount" style="color:#9B2A2A">500 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#9B2A2A">100 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#9B2A2A">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#9B2A2A">20 ml</span></div><div class="ing-row"><span class="ing-name">apelsin (skivad)</span><span class="ing-amount" style="color:#9B2A2A">1 st</span></div><div class="ing-row"><span class="ing-name">äpple (i bitar)</span><span class="ing-amount" style="color:#9B2A2A">1 st</span></div><div class="ing-row"><span class="ing-name">sodavatten (tillsätts vid servering)</span><span class="ing-amount" style="color:#9B2A2A">200 ml</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#9B2A2A22;border-color:#9B2A2A55;color:#9B2A2A">1</div><p class="step-text">Blanda druvjuice, apelsinjuice, citronsaft och sockerlag i en kanna.</p></div><div class="step-row"><div class="step-num" style="background:#9B2A2A22;border-color:#9B2A2A55;color:#9B2A2A">2</div><p class="step-text">Skiva apelsin och äpple, lägg i kannan.</p></div><div class="step-row"><div class="step-num" style="background:#9B2A2A22;border-color:#9B2A2A55;color:#9B2A2A">3</div><p class="step-text">Låt stå i kylen i minst 1 timme (gärna 4–8 h) så frukten drar.</p></div><div class="step-row"><div class="step-num" style="background:#9B2A2A22;border-color:#9B2A2A55;color:#9B2A2A">4</div><p class="step-text">Tillsätt sodavatten precis innan servering.</p></div><div class="step-row"><div class="step-num" style="background:#9B2A2A22;border-color:#9B2A2A55;color:#9B2A2A">5</div><p class="step-text">Häll upp i glas med is och fruktbitar.</p></div></div>
+    <div class="tip" style="border:1px solid #9B2A2A33;border-left:3px solid #9B2A2A">
+      <p class="tip-label" style="color:#9B2A2A">💡 Tips</p>
+      <p class="tip-text">Görs med fördel dagen innan. Smakerna förbättras påtagligt efter ett par timmar i kylen.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">rött vin (rioja)</span><span class="ing-amount" style="color:#B8935A">750 ml</span></div><div class="ing-row"><span class="ing-name">brandy</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#B8935A">100 ml</span></div><div class="ing-row"><span class="ing-name">socker</span><span class="ing-amount" style="color:#B8935A">2 msk</span></div><div class="ing-row"><span class="ing-name">frukt i bitar</span><span class="ing-amount" style="color:#B8935A">Blandad</span></div></div>
+      <p class="orig-note">Spansk kannklassiker. Namnet kommer från 'sangre' — blod — efter den djupröda färgen.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="19" data-cat="Citrus &amp; Fräsch" data-name="arnold palmer">
+  <summary>
+    <span class="bar" style="background:#C4A838"></span>
+    <span class="emoji">🍵</span>
+    <span class="head">
+      <span class="dname">Arnold Palmer</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">svart te (bryggt och kylt)</span><span class="ing-amount" style="color:#C4A838">150 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft (ca 1,5 citron)</span><span class="ing-amount" style="color:#C4A838">50 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#C4A838">15 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#C4A838">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#C4A83822;border-color:#C4A83855;color:#C4A838">1</div><p class="step-text">Brygg ett starkt svart te (2 tepåsar på 2 dl vatten) och låt svalna helt.</p></div><div class="step-row"><div class="step-num" style="background:#C4A83822;border-color:#C4A83855;color:#C4A838">2</div><p class="step-text">Blanda citronsaft och sockerlag i glaset.</p></div><div class="step-row"><div class="step-num" style="background:#C4A83822;border-color:#C4A83855;color:#C4A838">3</div><p class="step-text">Fyll med is.</p></div><div class="step-row"><div class="step-num" style="background:#C4A83822;border-color:#C4A83855;color:#C4A838">4</div><p class="step-text">Häll i det kalla teet och rör om.</p></div><div class="step-row"><div class="step-num" style="background:#C4A83822;border-color:#C4A83855;color:#C4A838">5</div><p class="step-text">Garnera med en citronskiva.</p></div></div>
+    <div class="tip" style="border:1px solid #C4A83833;border-left:3px solid #C4A838">
+      <p class="tip-label" style="color:#C4A838">💡 Tips</p>
+      <p class="tip-text">Earl Grey ger en fin bergamotton. Brygg gärna teet dagen innan och förvara i kylen.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">är redan alkoholfri!</span><span class="ing-amount" style="color:#B8935A">Original</span></div><div class="ing-row"><span class="ing-name">vodka kallas den John Daly</span><span class="ing-amount" style="color:#B8935A">Med 40 ml</span></div></div>
+      <p class="orig-note">Uppkallad efter golflegendaren som beställde te + lemonad. Originalet är alkoholfritt — spritversionen är uppkallad efter en annan (festglad) golfare.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="20" data-cat="Bär &amp; Frukt" data-name="shirley temple">
+  <summary>
+    <span class="bar" style="background:#E84A6A"></span>
+    <span class="emoji">🍒</span>
+    <span class="head">
+      <span class="dname">Shirley Temple</span>
+      <span class="dcat" style="color:#C4547A">Bär &amp; Frukt</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">ginger ale</span><span class="ing-amount" style="color:#E84A6A">120 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#E84A6A">60 ml</span></div><div class="ing-row"><span class="ing-name">grenadine (granatäppelsirap)</span><span class="ing-amount" style="color:#E84A6A">20 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E84A6A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E84A6A22;border-color:#E84A6A55;color:#E84A6A">1</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#E84A6A22;border-color:#E84A6A55;color:#E84A6A">2</div><p class="step-text">Häll i apelsinjuice.</p></div><div class="step-row"><div class="step-num" style="background:#E84A6A22;border-color:#E84A6A55;color:#E84A6A">3</div><p class="step-text">Häll i ginger ale.</p></div><div class="step-row"><div class="step-num" style="background:#E84A6A22;border-color:#E84A6A55;color:#E84A6A">4</div><p class="step-text">Tillsätt grenadine sist — låt den sjunka ner som ett lager.</p></div><div class="step-row"><div class="step-num" style="background:#E84A6A22;border-color:#E84A6A55;color:#E84A6A">5</div><p class="step-text">Garnera med ett cocktailkörsbär och en apelsinskiva.</p></div></div>
+    <div class="tip" style="border:1px solid #E84A6A33;border-left:3px solid #E84A6A">
+      <p class="tip-label" style="color:#E84A6A">💡 Tips</p>
+      <p class="tip-text">En av de mest ikoniska alkoholfria drinkarna. Ginger ale (t.ex. Schweppes) finns överallt.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">är redan alkoholfri!</span><span class="ing-amount" style="color:#B8935A">Original</span></div><div class="ing-row"><span class="ing-name">vodka kallas den Dirty Shirley</span><span class="ing-amount" style="color:#B8935A">Med 40 ml</span></div></div>
+      <p class="orig-note">Skapades på 1930-talet för barnstjärnan Shirley Temple så hon kunde 'skåla' med de vuxna i Hollywood.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="21" data-cat="Kryddig &amp; Komplex" data-name="espresso martini">
+  <summary>
+    <span class="bar" style="background:#6B4A38"></span>
+    <span class="emoji">☕</span>
+    <span class="head">
+      <span class="dname">Espresso Martini</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Martiniglas / Coupe</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">nybryggd espresso eller starkt kaffe (kylt)</span><span class="ing-amount" style="color:#6B4A38">60 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#6B4A38">20 ml</span></div><div class="ing-row"><span class="ing-name">havregrädde</span><span class="ing-amount" style="color:#6B4A38">20 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#6B4A38">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#6B4A3822;border-color:#6B4A3855;color:#6B4A38">1</div><p class="step-text">Brygg espresso och låt svalna något.</p></div><div class="step-row"><div class="step-num" style="background:#6B4A3822;border-color:#6B4A3855;color:#6B4A38">2</div><p class="step-text">Häll kaffe, sockerlag och havregrädde i en shaker med rikligt med is.</p></div><div class="step-row"><div class="step-num" style="background:#6B4A3822;border-color:#6B4A3855;color:#6B4A38">3</div><p class="step-text">Shaka riktigt hårt i 20 sekunder — det ger det klassiska skummet.</p></div><div class="step-row"><div class="step-num" style="background:#6B4A3822;border-color:#6B4A3855;color:#6B4A38">4</div><p class="step-text">Sila ner i ett kylt glas.</p></div><div class="step-row"><div class="step-num" style="background:#6B4A3822;border-color:#6B4A3855;color:#6B4A38">5</div><p class="step-text">Garnera med tre kaffebönor.</p></div></div>
+    <div class="tip" style="border:1px solid #6B4A3833;border-left:3px solid #6B4A38">
+      <p class="tip-label" style="color:#6B4A38">💡 Tips</p>
+      <p class="tip-text">Hård shakning är hemligheten bakom skumlagret. Kall espresso från en mokabryggare funkar utmärkt.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vodka</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">kaffelikör (Kahlúa)</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">espresso</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">10 ml</span></div></div>
+      <p class="orig-note">London, 1983. En modell bad bartendern Dick Bradsell om något som 'väcker mig och sen...' — resten är historia.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="22" data-cat="Tropisk" data-name="pornstar martini">
+  <summary>
+    <span class="bar" style="background:#E8A02A"></span>
+    <span class="emoji">🥭</span>
+    <span class="head">
+      <span class="dname">Pornstar Martini</span>
+      <span class="dcat" style="color:#E8A038">Tropisk</span>
+      <span class="dglass">🥃 Coupe + shotglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">passionsfrukt (färsk)</span><span class="ing-amount" style="color:#E8A02A">1 st</span></div><div class="ing-row"><span class="ing-name">mango- eller passionsjuice</span><span class="ing-amount" style="color:#E8A02A">60 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#E8A02A">15 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag + 1 krm vaniljsocker</span><span class="ing-amount" style="color:#E8A02A">10 ml</span></div><div class="ing-row"><span class="ing-name">mousserande äppeljuice (i shotglas bredvid)</span><span class="ing-amount" style="color:#E8A02A">60 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E8A02A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8A02A22;border-color:#E8A02A55;color:#E8A02A">1</div><p class="step-text">Skrapa ur halva passionsfrukten i shakern.</p></div><div class="step-row"><div class="step-num" style="background:#E8A02A22;border-color:#E8A02A55;color:#E8A02A">2</div><p class="step-text">Tillsätt juice, limejuice, sockerlag och vaniljsocker med is.</p></div><div class="step-row"><div class="step-num" style="background:#E8A02A22;border-color:#E8A02A55;color:#E8A02A">3</div><p class="step-text">Shaka i 15 sekunder och sila ner i ett kylt glas.</p></div><div class="step-row"><div class="step-num" style="background:#E8A02A22;border-color:#E8A02A55;color:#E8A02A">4</div><p class="step-text">Lägg andra halvan av passionsfrukten som garnering, flytande med köttsidan upp.</p></div><div class="step-row"><div class="step-num" style="background:#E8A02A22;border-color:#E8A02A55;color:#E8A02A">5</div><p class="step-text">Servera med ett shotglas mousserande äppeljuice bredvid — sippas växelvis.</p></div></div>
+    <div class="tip" style="border:1px solid #E8A02A33;border-left:3px solid #E8A02A">
+      <p class="tip-label" style="color:#E8A02A">💡 Tips</p>
+      <p class="tip-text">Färsk passionsfrukt finns i de flesta butiker. Shotglaset bredvid är hela grejen — så serveras originalet.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vaniljvodka</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">Passoã (passionslikör)</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">passionsfrukt</span><span class="ing-amount" style="color:#B8935A">1 st</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">prosecco i shotglas</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div></div>
+      <p class="orig-note">Skapad i London 2002. En av Storbritanniens mest beställda cocktails de senaste tio åren.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="23" data-cat="Tropisk" data-name="mai tai">
+  <summary>
+    <span class="bar" style="background:#D4762A"></span>
+    <span class="emoji">🌺</span>
+    <span class="head">
+      <span class="dname">Mai Tai</span>
+      <span class="dcat" style="color:#E8A038">Tropisk</span>
+      <span class="dglass">🥃 Lowball / Tikiglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">ananasjuice</span><span class="ing-amount" style="color:#D4762A">60 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#D4762A">40 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#D4762A">25 ml</span></div><div class="ing-row"><span class="ing-name">mandelsirap (eller sockerlag + 2 droppar mandelessens)</span><span class="ing-amount" style="color:#D4762A">10 ml</span></div><div class="ing-row"><span class="ing-name">grenadine</span><span class="ing-amount" style="color:#D4762A">10 ml</span></div><div class="ing-row"><span class="ing-name">krossad is</span><span class="ing-amount" style="color:#D4762A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#D4762A22;border-color:#D4762A55;color:#D4762A">1</div><p class="step-text">Shaka alla juicer och mandelsirap med is.</p></div><div class="step-row"><div class="step-num" style="background:#D4762A22;border-color:#D4762A55;color:#D4762A">2</div><p class="step-text">Sila ner i ett glas fyllt med krossad is.</p></div><div class="step-row"><div class="step-num" style="background:#D4762A22;border-color:#D4762A55;color:#D4762A">3</div><p class="step-text">Droppa grenadine över toppen.</p></div><div class="step-row"><div class="step-num" style="background:#D4762A22;border-color:#D4762A55;color:#D4762A">4</div><p class="step-text">Garnera med mint och en ananasbit.</p></div></div>
+    <div class="tip" style="border:1px solid #D4762A33;border-left:3px solid #D4762A">
+      <p class="tip-label" style="color:#D4762A">💡 Tips</p>
+      <p class="tip-text">Mandelessens (till bakning) + sockerlag ersätter orgeatsirap. Två droppar räcker!</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">mörk rom</span><span class="ing-amount" style="color:#B8935A">40 ml</span></div><div class="ing-row"><span class="ing-name">ljus rom</span><span class="ing-amount" style="color:#B8935A">20 ml</span></div><div class="ing-row"><span class="ing-name">orange curaçao</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">orgeat (mandelsirap)</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div></div>
+      <p class="orig-note">Tikikulturens kronjuvel, skapad av Trader Vic i Oakland 1944. 'Maita'i' betyder 'bra' på tahitiska.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="24" data-cat="Citrus &amp; Fräsch" data-name="cuba libre">
+  <summary>
+    <span class="bar" style="background:#8B4A2A"></span>
+    <span class="emoji">🥤</span>
+    <span class="head">
+      <span class="dname">Cuba Libre</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">cola</span><span class="ing-amount" style="color:#8B4A2A">150 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#8B4A2A">25 ml</span></div><div class="ing-row"><span class="ing-name">lime</span><span class="ing-amount" style="color:#8B4A2A">2 klyftor</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#8B4A2A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#8B4A2A22;border-color:#8B4A2A55;color:#8B4A2A">1</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#8B4A2A22;border-color:#8B4A2A55;color:#8B4A2A">2</div><p class="step-text">Pressa i limejuice och släpp ner klyftorna.</p></div><div class="step-row"><div class="step-num" style="background:#8B4A2A22;border-color:#8B4A2A55;color:#8B4A2A">3</div><p class="step-text">Toppa med cola och rör om ett varv.</p></div></div>
+    <div class="tip" style="border:1px solid #8B4A2A33;border-left:3px solid #8B4A2A">
+      <p class="tip-label" style="color:#8B4A2A">💡 Tips</p>
+      <p class="tip-text">Skillnaden mot 'bara cola': färsk lime, ordentligt med is. Testa med Coca-Cola i glasflaska för autentisk känsla.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">ljus rom</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">cola</span><span class="ing-amount" style="color:#B8935A">120 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div></div>
+      <p class="orig-note">Kuba, ca 1900 — namnet betyder 'Fria Kuba', en skål efter självständighetskriget.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="25" data-cat="Citrus &amp; Fräsch" data-name="paloma">
+  <summary>
+    <span class="bar" style="background:#E88A9A"></span>
+    <span class="emoji">🕊️</span>
+    <span class="head">
+      <span class="dname">Paloma</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">grapefruktjuice</span><span class="ing-amount" style="color:#E88A9A">100 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#E88A9A">20 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#E88A9A">10 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#E88A9A">80 ml</span></div><div class="ing-row"><span class="ing-name">salt</span><span class="ing-amount" style="color:#E88A9A">1 nypa</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E88A9A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E88A9A22;border-color:#E88A9A55;color:#E88A9A">1</div><p class="step-text">Gnid limejuice på glaskanten och doppa i salt (valfritt).</p></div><div class="step-row"><div class="step-num" style="background:#E88A9A22;border-color:#E88A9A55;color:#E88A9A">2</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#E88A9A22;border-color:#E88A9A55;color:#E88A9A">3</div><p class="step-text">Häll i grapefruktjuice, limejuice, sockerlag och en nypa salt.</p></div><div class="step-row"><div class="step-num" style="background:#E88A9A22;border-color:#E88A9A55;color:#E88A9A">4</div><p class="step-text">Toppa med sodavatten och rör om.</p></div><div class="step-row"><div class="step-num" style="background:#E88A9A22;border-color:#E88A9A55;color:#E88A9A">5</div><p class="step-text">Garnera med en grapefruktklyfta.</p></div></div>
+    <div class="tip" style="border:1px solid #E88A9A33;border-left:3px solid #E88A9A">
+      <p class="tip-label" style="color:#E88A9A">💡 Tips</p>
+      <p class="tip-text">Saltet lyfter grapefruktens smak markant — hoppa inte över det.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">tequila</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">grapefruktläsk (Jarritos/Squirt)</span><span class="ing-amount" style="color:#B8935A">100 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">salt</span><span class="ing-amount" style="color:#B8935A">1 nypa</span></div></div>
+      <p class="orig-note">Mexikos folkkäraste tequiladrink — mer populär än margaritan i hemlandet.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="26" data-cat="Kryddig &amp; Komplex" data-name="dark 'n' stormy">
+  <summary>
+    <span class="bar" style="background:#4A3A2A"></span>
+    <span class="emoji">⛈️</span>
+    <span class="head">
+      <span class="dname">Dark 'n' Stormy</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">ginger beer</span><span class="ing-amount" style="color:#4A3A2A">150 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#4A3A2A">25 ml</span></div><div class="ing-row"><span class="ing-name">mörk sirap (blandad med 15 ml varmt vatten)</span><span class="ing-amount" style="color:#4A3A2A">15 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#4A3A2A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#4A3A2A22;border-color:#4A3A2A55;color:#4A3A2A">1</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#4A3A2A22;border-color:#4A3A2A55;color:#4A3A2A">2</div><p class="step-text">Häll i limejuice och ginger beer.</p></div><div class="step-row"><div class="step-num" style="background:#4A3A2A22;border-color:#4A3A2A55;color:#4A3A2A">3</div><p class="step-text">Häll den utspädda mörka sirapen ovanpå så den 'svävar' som ett mörkt moln.</p></div><div class="step-row"><div class="step-num" style="background:#4A3A2A22;border-color:#4A3A2A55;color:#4A3A2A">4</div><p class="step-text">Garnera med en limeklyfta.</p></div></div>
+    <div class="tip" style="border:1px solid #4A3A2A33;border-left:3px solid #4A3A2A">
+      <p class="tip-label" style="color:#4A3A2A">💡 Tips</p>
+      <p class="tip-text">Mörk sirap (Dansukker) härmar den mörka rommens karamellton och skapar den klassiska 'stormiga' looken.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">mörk rom (Gosling's Black Seal)</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">ginger beer</span><span class="ing-amount" style="color:#B8935A">150 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div></div>
+      <p class="orig-note">Bermudas nationaldrink — namnet är faktiskt varumärkesskyddat av Gosling's romdestilleri.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="27" data-cat="Kryddig &amp; Komplex" data-name="amaretto sour">
+  <summary>
+    <span class="bar" style="background:#C48A3A"></span>
+    <span class="emoji">🥜</span>
+    <span class="head">
+      <span class="dname">Amaretto Sour</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Lowball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#C48A3A">45 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#C48A3A">25 ml</span></div><div class="ing-row"><span class="ing-name">mandelessens</span><span class="ing-amount" style="color:#C48A3A">4 droppar</span></div><div class="ing-row"><span class="ing-name">aquafaba (kikärtsspad)</span><span class="ing-amount" style="color:#C48A3A">30 ml</span></div><div class="ing-row"><span class="ing-name">äppeljuice</span><span class="ing-amount" style="color:#C48A3A">30 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#C48A3A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#C48A3A22;border-color:#C48A3A55;color:#C48A3A">1</div><p class="step-text">Dry shake (utan is) alla ingredienser i 15 sekunder.</p></div><div class="step-row"><div class="step-num" style="background:#C48A3A22;border-color:#C48A3A55;color:#C48A3A">2</div><p class="step-text">Tillsätt is och shaka igen i 15 sekunder.</p></div><div class="step-row"><div class="step-num" style="background:#C48A3A22;border-color:#C48A3A55;color:#C48A3A">3</div><p class="step-text">Sila ner i ett glas med en stor isbit.</p></div><div class="step-row"><div class="step-num" style="background:#C48A3A22;border-color:#C48A3A55;color:#C48A3A">4</div><p class="step-text">Garnera med ett cocktailkörsbär och en apelsinskiva.</p></div></div>
+    <div class="tip" style="border:1px solid #C48A3A33;border-left:3px solid #C48A3A">
+      <p class="tip-label" style="color:#C48A3A">💡 Tips</p>
+      <p class="tip-text">Mandelessensen gör jobbet — 4 droppar ger den karaktäristiska amarettosmaken. Smaka av, den är stark!</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">amaretto (Disaronno)</span><span class="ing-amount" style="color:#B8935A">45 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">10 ml</span></div><div class="ing-row"><span class="ing-name">äggvita</span><span class="ing-amount" style="color:#B8935A">1 st</span></div></div>
+      <p class="orig-note">Amaretto är en italiensk mandellikör. Söt, syrlig och krämig — en perfekt dessertdrink.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="28" data-cat="Kryddig &amp; Komplex" data-name="white russian">
+  <summary>
+    <span class="bar" style="background:#C4B49A"></span>
+    <span class="emoji">🐻</span>
+    <span class="head">
+      <span class="dname">White Russian</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Lowball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">kallbryggt kaffe eller kylt starkt kaffe</span><span class="ing-amount" style="color:#C4B49A">80 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#C4B49A">15 ml</span></div><div class="ing-row"><span class="ing-name">havregrädde</span><span class="ing-amount" style="color:#C4B49A">60 ml</span></div><div class="ing-row"><span class="ing-name">isbit</span><span class="ing-amount" style="color:#C4B49A">1 stor</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#C4B49A22;border-color:#C4B49A55;color:#C4B49A">1</div><p class="step-text">Lägg en stor isbit i glaset.</p></div><div class="step-row"><div class="step-num" style="background:#C4B49A22;border-color:#C4B49A55;color:#C4B49A">2</div><p class="step-text">Häll i kaffe och sockerlag, rör om.</p></div><div class="step-row"><div class="step-num" style="background:#C4B49A22;border-color:#C4B49A55;color:#C4B49A">3</div><p class="step-text">Häll havregrädden långsamt över en skedbaksida så den lägger sig som ett lager ovanpå.</p></div><div class="step-row"><div class="step-num" style="background:#C4B49A22;border-color:#C4B49A55;color:#C4B49A">4</div><p class="step-text">Rör om precis innan du dricker (eller låt bli — båda är rätt).</p></div></div>
+    <div class="tip" style="border:1px solid #C4B49A33;border-left:3px solid #C4B49A">
+      <p class="tip-label" style="color:#C4B49A">💡 Tips</p>
+      <p class="tip-text">iKaffe (Oatly) är perfekt här — den skiktar sig snyggt och skär sig inte.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vodka</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">kaffelikör (Kahlúa)</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div><div class="ing-row"><span class="ing-name">grädde</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div></div>
+      <p class="orig-note">The Dudes signaturdrink i The Big Lebowski (1998) — filmen gjorde den kult.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="29" data-cat="Citrus &amp; Fräsch" data-name="blue lagoon">
+  <summary>
+    <span class="bar" style="background:#3A8AC4"></span>
+    <span class="emoji">🏝️</span>
+    <span class="head">
+      <span class="dname">Blue Lagoon</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">blå sportdryck (t.ex. Powerade Blue)</span><span class="ing-amount" style="color:#3A8AC4">100 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#3A8AC4">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#3A8AC4">10 ml</span></div><div class="ing-row"><span class="ing-name">citronläsk (Sprite/7Up)</span><span class="ing-amount" style="color:#3A8AC4">80 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#3A8AC4">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#3A8AC422;border-color:#3A8AC455;color:#3A8AC4">1</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#3A8AC422;border-color:#3A8AC455;color:#3A8AC4">2</div><p class="step-text">Häll i sportdryck, citronsaft och sockerlag.</p></div><div class="step-row"><div class="step-num" style="background:#3A8AC422;border-color:#3A8AC455;color:#3A8AC4">3</div><p class="step-text">Toppa med citronläsk.</p></div><div class="step-row"><div class="step-num" style="background:#3A8AC422;border-color:#3A8AC455;color:#3A8AC4">4</div><p class="step-text">Garnera med en citronskiva och ett körsbär.</p></div></div>
+    <div class="tip" style="border:1px solid #3A8AC433;border-left:3px solid #3A8AC4">
+      <p class="tip-label" style="color:#3A8AC4">💡 Tips</p>
+      <p class="tip-text">Den blå färgen är hela poängen. Blå sportdryck ger färgen utan att du behöver köpa blue curaçao-sirap.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vodka</span><span class="ing-amount" style="color:#B8935A">40 ml</span></div><div class="ing-row"><span class="ing-name">blue curaçao</span><span class="ing-amount" style="color:#B8935A">20 ml</span></div><div class="ing-row"><span class="ing-name">lemonad/citronläsk</span><span class="ing-amount" style="color:#B8935A">100 ml</span></div></div>
+      <p class="orig-note">Skapad på Harry's Bar i Paris ca 1960. Blue curaçao är en apelsinlikör — den smakar apelsin, inte 'blått'.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="30" data-cat="Bär &amp; Frukt" data-name="strawberry daiquiri">
+  <summary>
+    <span class="bar" style="background:#E84A5A"></span>
+    <span class="emoji">🍓</span>
+    <span class="head">
+      <span class="dname">Strawberry Daiquiri</span>
+      <span class="dcat" style="color:#C4547A">Bär &amp; Frukt</span>
+      <span class="dglass">🥃 Coupe / Hurricanglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">frysta jordgubbar</span><span class="ing-amount" style="color:#E84A5A">150 g</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#E84A5A">40 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#E84A5A">25 ml</span></div><div class="ing-row"><span class="ing-name">vatten eller äppeljuice</span><span class="ing-amount" style="color:#E84A5A">50 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E84A5A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E84A5A22;border-color:#E84A5A55;color:#E84A5A">1</div><p class="step-text">Häll alla ingredienser i en blender.</p></div><div class="step-row"><div class="step-num" style="background:#E84A5A22;border-color:#E84A5A55;color:#E84A5A">2</div><p class="step-text">Mixa tills konsistensen är slät och slushig.</p></div><div class="step-row"><div class="step-num" style="background:#E84A5A22;border-color:#E84A5A55;color:#E84A5A">3</div><p class="step-text">Smaka av — tillsätt mer sockerlag om gubbarna är syrliga.</p></div><div class="step-row"><div class="step-num" style="background:#E84A5A22;border-color:#E84A5A55;color:#E84A5A">4</div><p class="step-text">Häll upp och garnera med en färsk jordgubbe på kanten.</p></div></div>
+    <div class="tip" style="border:1px solid #E84A5A33;border-left:3px solid #E84A5A">
+      <p class="tip-label" style="color:#E84A5A">💡 Tips</p>
+      <p class="tip-text">Frysta jordgubbar är billigare än färska och ger perfekt slush-konsistens direkt.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">ljus rom</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">jordgubbar</span><span class="ing-amount" style="color:#B8935A">150 g</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div></div>
+      <p class="orig-note">Frozenvarianten av daiquirin blev sommarklassiker under 1900-talets andra hälft.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="31" data-cat="Citrus &amp; Fräsch" data-name="mint julep">
+  <summary>
+    <span class="bar" style="background:#5AAA6A"></span>
+    <span class="emoji">🏇</span>
+    <span class="head">
+      <span class="dname">Mint Julep</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Julepmugg / Lowball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">mintblad</span><span class="ing-amount" style="color:#5AAA6A">10 st</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#5AAA6A">20 ml</span></div><div class="ing-row"><span class="ing-name">äppeljuice (klar)</span><span class="ing-amount" style="color:#5AAA6A">100 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#5AAA6A">30 ml</span></div><div class="ing-row"><span class="ing-name">krossad is</span><span class="ing-amount" style="color:#5AAA6A">2 nävar</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#5AAA6A22;border-color:#5AAA6A55;color:#5AAA6A">1</div><p class="step-text">Muddla mintblad försiktigt med sockerlag i glaset.</p></div><div class="step-row"><div class="step-num" style="background:#5AAA6A22;border-color:#5AAA6A55;color:#5AAA6A">2</div><p class="step-text">Fyll glaset helt med krossad is.</p></div><div class="step-row"><div class="step-num" style="background:#5AAA6A22;border-color:#5AAA6A55;color:#5AAA6A">3</div><p class="step-text">Häll i äppeljuice och toppa med sodavatten.</p></div><div class="step-row"><div class="step-num" style="background:#5AAA6A22;border-color:#5AAA6A55;color:#5AAA6A">4</div><p class="step-text">Rör tills glaset immar sig på utsidan.</p></div><div class="step-row"><div class="step-num" style="background:#5AAA6A22;border-color:#5AAA6A55;color:#5AAA6A">5</div><p class="step-text">Toppa med mer krossad is och en generös mintkvast.</p></div></div>
+    <div class="tip" style="border:1px solid #5AAA6A33;border-left:3px solid #5AAA6A">
+      <p class="tip-label" style="color:#5AAA6A">💡 Tips</p>
+      <p class="tip-text">Krossad is är ett måste — lägg isbitar i en fryspåse och banka med kavel.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">bourbon</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">mintblad</span><span class="ing-amount" style="color:#B8935A">10 st</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">krossad is</span><span class="ing-amount" style="color:#B8935A">Mycket</span></div></div>
+      <p class="orig-note">Kentucky Derbys officiella drink sedan 1938 — nästan 120 000 säljs under tävlingshelgen.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="32" data-cat="Citrus &amp; Fräsch" data-name="gimlet">
+  <summary>
+    <span class="bar" style="background:#A8C43A"></span>
+    <span class="emoji">🔩</span>
+    <span class="head">
+      <span class="dname">Gimlet</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Coupe / Martiniglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#A8C43A">50 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#A8C43A">30 ml</span></div><div class="ing-row"><span class="ing-name">tonic water</span><span class="ing-amount" style="color:#A8C43A">30 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#A8C43A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#A8C43A22;border-color:#A8C43A55;color:#A8C43A">1</div><p class="step-text">Shaka limejuice och sockerlag med is i 15 sekunder.</p></div><div class="step-row"><div class="step-num" style="background:#A8C43A22;border-color:#A8C43A55;color:#A8C43A">2</div><p class="step-text">Sila ner i ett kylt glas.</p></div><div class="step-row"><div class="step-num" style="background:#A8C43A22;border-color:#A8C43A55;color:#A8C43A">3</div><p class="step-text">Toppa med en skvätt tonic för lite bitterhet.</p></div><div class="step-row"><div class="step-num" style="background:#A8C43A22;border-color:#A8C43A55;color:#A8C43A">4</div><p class="step-text">Garnera med en tunn limeskiva.</p></div></div>
+    <div class="tip" style="border:1px solid #A8C43A33;border-left:3px solid #A8C43A">
+      <p class="tip-label" style="color:#A8C43A">💡 Tips</p>
+      <p class="tip-text">Originalet görs med lime cordial — vill du vara autentisk, koka 1 dl limejuice + 1 dl socker + rivet limeskal till en egen cordial.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">gin</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">lime cordial (Rose's)</span><span class="ing-amount" style="color:#B8935A">20 ml</span></div></div>
+      <p class="orig-note">Brittiska flottans drink — limen höll skörbjuggen borta. Raymond Chandlers detektiv Philip Marlowe drack dem.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="33" data-cat="Citrus &amp; Fräsch" data-name="sidecar">
+  <summary>
+    <span class="bar" style="background:#C4A02A"></span>
+    <span class="emoji">🏍️</span>
+    <span class="head">
+      <span class="dname">Sidecar</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Coupe</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#C4A02A">40 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#C4A02A">40 ml</span></div><div class="ing-row"><span class="ing-name">vit druvjuice</span><span class="ing-amount" style="color:#C4A02A">30 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#C4A02A">10 ml</span></div><div class="ing-row"><span class="ing-name">socker (sockerrand)</span><span class="ing-amount" style="color:#C4A02A">1 nypa</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#C4A02A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#C4A02A22;border-color:#C4A02A55;color:#C4A02A">1</div><p class="step-text">Gnid citron på glaskanten och doppa i socker.</p></div><div class="step-row"><div class="step-num" style="background:#C4A02A22;border-color:#C4A02A55;color:#C4A02A">2</div><p class="step-text">Shaka alla ingredienser med is i 15 sekunder.</p></div><div class="step-row"><div class="step-num" style="background:#C4A02A22;border-color:#C4A02A55;color:#C4A02A">3</div><p class="step-text">Sila ner i det kylda glaset.</p></div><div class="step-row"><div class="step-num" style="background:#C4A02A22;border-color:#C4A02A55;color:#C4A02A">4</div><p class="step-text">Garnera med ett apelsinskal.</p></div></div>
+    <div class="tip" style="border:1px solid #C4A02A33;border-left:3px solid #C4A02A">
+      <p class="tip-label" style="color:#C4A02A">💡 Tips</p>
+      <p class="tip-text">Vit druvjuice härmar cognacens fruktighet. Sockerranden är klassisk för just denna drink.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">cognac</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">Cointreau</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div></div>
+      <p class="orig-note">Paris, ca 1920. Uppkallad efter en stamgäst som anlände till baren i motorcykelsidvagn.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="34" data-cat="Citrus &amp; Fräsch" data-name="long island iced tea">
+  <summary>
+    <span class="bar" style="background:#B4762A"></span>
+    <span class="emoji">🧊</span>
+    <span class="head">
+      <span class="dname">Long Island Iced Tea</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">cola</span><span class="ing-amount" style="color:#B4762A">60 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#B4762A">40 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B4762A">20 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#B4762A">20 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B4762A">15 ml</span></div><div class="ing-row"><span class="ing-name">kallt svart te</span><span class="ing-amount" style="color:#B4762A">60 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#B4762A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#B4762A22;border-color:#B4762A55;color:#B4762A">1</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#B4762A22;border-color:#B4762A55;color:#B4762A">2</div><p class="step-text">Häll i citrusjuicer, sockerlag och det kalla teet.</p></div><div class="step-row"><div class="step-num" style="background:#B4762A22;border-color:#B4762A55;color:#B4762A">3</div><p class="step-text">Rör om.</p></div><div class="step-row"><div class="step-num" style="background:#B4762A22;border-color:#B4762A55;color:#B4762A">4</div><p class="step-text">Toppa med cola tills färgen liknar iste.</p></div><div class="step-row"><div class="step-num" style="background:#B4762A22;border-color:#B4762A55;color:#B4762A">5</div><p class="step-text">Garnera med en citronklyfta.</p></div></div>
+    <div class="tip" style="border:1px solid #B4762A33;border-left:3px solid #B4762A">
+      <p class="tip-label" style="color:#B4762A">💡 Tips</p>
+      <p class="tip-text">Teet ger djup och 'vuxenhet' åt smaken — originalet innehåller inget te alls trots namnet, men mocktailen blir bättre med.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vardera: vodka, gin, ljus rom, tequila, triple sec</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#B8935A">25 ml</span></div><div class="ing-row"><span class="ing-name">sockerlag</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">cola</span><span class="ing-amount" style="color:#B8935A">Toppa</span></div></div>
+      <p class="orig-note">1970-talets ökända styrkedrink — fem spritsorter men smakar som iste. Hanteras med respekt.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="35" data-cat="Kryddig &amp; Komplex" data-name="irish coffee">
+  <summary>
+    <span class="bar" style="background:#6B4A2A"></span>
+    <span class="emoji">☘️</span>
+    <span class="head">
+      <span class="dname">Irish Coffee</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Glas med handtag</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">nybryggt starkt kaffe</span><span class="ing-amount" style="color:#6B4A2A">150 ml</span></div><div class="ing-row"><span class="ing-name">farinsocker eller muscovadosocker</span><span class="ing-amount" style="color:#6B4A2A">2 tsk</span></div><div class="ing-row"><span class="ing-name">havrevispgrädde (lättvispad)</span><span class="ing-amount" style="color:#6B4A2A">40 ml</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#6B4A2A22;border-color:#6B4A2A55;color:#6B4A2A">1</div><p class="step-text">Vispa havregrädden lätt — den ska vara tjockflytande men hällbar.</p></div><div class="step-row"><div class="step-num" style="background:#6B4A2A22;border-color:#6B4A2A55;color:#6B4A2A">2</div><p class="step-text">Häll hett kaffe i ett förvärmt glas och rör i sockret tills det löst sig.</p></div><div class="step-row"><div class="step-num" style="background:#6B4A2A22;border-color:#6B4A2A55;color:#6B4A2A">3</div><p class="step-text">Häll grädden långsamt över en varm skedbaksida så den flyter ovanpå.</p></div><div class="step-row"><div class="step-num" style="background:#6B4A2A22;border-color:#6B4A2A55;color:#6B4A2A">4</div><p class="step-text">Drick kaffet genom gräddlagret — rör inte om!</p></div></div>
+    <div class="tip" style="border:1px solid #6B4A2A33;border-left:3px solid #6B4A2A">
+      <p class="tip-label" style="color:#6B4A2A">💡 Tips</p>
+      <p class="tip-text">Oatly havrevisp fungerar perfekt. Hemligheten: sockret i kaffet hjälper grädden att flyta.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">irländsk whiskey</span><span class="ing-amount" style="color:#B8935A">40 ml</span></div><div class="ing-row"><span class="ing-name">hett kaffe</span><span class="ing-amount" style="color:#B8935A">150 ml</span></div><div class="ing-row"><span class="ing-name">farinsocker</span><span class="ing-amount" style="color:#B8935A">2 tsk</span></div><div class="ing-row"><span class="ing-name">lättvispad grädde</span><span class="ing-amount" style="color:#B8935A">Lager</span></div></div>
+      <p class="orig-note">Skapad på Shannons flygplats 1943 för att värma frusna transatlantiska passagerare.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="36" data-cat="Kryddig &amp; Komplex" data-name="bloody mary">
+  <summary>
+    <span class="bar" style="background:#C43A2A"></span>
+    <span class="emoji">🍅</span>
+    <span class="head">
+      <span class="dname">Bloody Mary</span>
+      <span class="dcat" style="color:#9B7040">Kryddig &amp; Komplex</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">tomatjuice</span><span class="ing-amount" style="color:#C43A2A">150 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#C43A2A">20 ml</span></div><div class="ing-row"><span class="ing-name">soja (istället för worcestershire)</span><span class="ing-amount" style="color:#C43A2A">1 tsk</span></div><div class="ing-row"><span class="ing-name">tabasco</span><span class="ing-amount" style="color:#C43A2A">3–5 stänk</span></div><div class="ing-row"><span class="ing-name">selleri- eller vanligt salt + svartpeppar</span><span class="ing-amount" style="color:#C43A2A">1 krm</span></div><div class="ing-row"><span class="ing-name">selleri</span><span class="ing-amount" style="color:#C43A2A">1 stjälk</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#C43A2A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#C43A2A22;border-color:#C43A2A55;color:#C43A2A">1</div><p class="step-text">Häll tomatjuice, citronsaft, soja och tabasco i glaset.</p></div><div class="step-row"><div class="step-num" style="background:#C43A2A22;border-color:#C43A2A55;color:#C43A2A">2</div><p class="step-text">Krydda med salt och peppar och rör om ordentligt.</p></div><div class="step-row"><div class="step-num" style="background:#C43A2A22;border-color:#C43A2A55;color:#C43A2A">3</div><p class="step-text">Fyll på med is.</p></div><div class="step-row"><div class="step-num" style="background:#C43A2A22;border-color:#C43A2A55;color:#C43A2A">4</div><p class="step-text">Garnera med selleristjälk och en citronklyfta.</p></div><div class="step-row"><div class="step-num" style="background:#C43A2A22;border-color:#C43A2A55;color:#C43A2A">5</div><p class="step-text">Smaka av — den ska vara kryddig och pigg.</p></div></div>
+    <div class="tip" style="border:1px solid #C43A2A33;border-left:3px solid #C43A2A">
+      <p class="tip-label" style="color:#C43A2A">💡 Tips</p>
+      <p class="tip-text">Klassisk worcestershiresås innehåller ansjovis — soja ger samma umami och är veganskt. Virgin Mary är namnet på originalets alkoholfria version.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vodka</span><span class="ing-amount" style="color:#B8935A">45 ml</span></div><div class="ing-row"><span class="ing-name">tomatjuice</span><span class="ing-amount" style="color:#B8935A">150 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">worcestershire + tabasco</span><span class="ing-amount" style="color:#B8935A">Stänk</span></div><div class="ing-row"><span class="ing-name">salt, peppar, selleri</span><span class="ing-amount" style="color:#B8935A">Krydda</span></div></div>
+      <p class="orig-note">Paris 1921, perfektionerad i New York. Världens mest kända brunch-drink.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="37" data-cat="Citrus &amp; Fräsch" data-name="screwdriver">
+  <summary>
+    <span class="bar" style="background:#E8A22A"></span>
+    <span class="emoji">🪛</span>
+    <span class="head">
+      <span class="dname">Screwdriver</span>
+      <span class="dcat" style="color:#5BAA78">Citrus &amp; Fräsch</span>
+      <span class="dglass">🥃 Highball</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">färskpressad apelsinjuice</span><span class="ing-amount" style="color:#E8A22A">150 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#E8A22A">50 ml</span></div><div class="ing-row"><span class="ing-name">citronsaft</span><span class="ing-amount" style="color:#E8A22A">10 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E8A22A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8A22A22;border-color:#E8A22A55;color:#E8A22A">1</div><p class="step-text">Fyll glaset med is.</p></div><div class="step-row"><div class="step-num" style="background:#E8A22A22;border-color:#E8A22A55;color:#E8A22A">2</div><p class="step-text">Häll i apelsinjuice och citronsaft.</p></div><div class="step-row"><div class="step-num" style="background:#E8A22A22;border-color:#E8A22A55;color:#E8A22A">3</div><p class="step-text">Toppa med sodavatten för lite spets.</p></div><div class="step-row"><div class="step-num" style="background:#E8A22A22;border-color:#E8A22A55;color:#E8A22A">4</div><p class="step-text">Garnera med en apelsinskiva.</p></div></div>
+    <div class="tip" style="border:1px solid #E8A22A33;border-left:3px solid #E8A22A">
+      <p class="tip-label" style="color:#E8A22A">💡 Tips</p>
+      <p class="tip-text">Med färskpressad juice och en syrlig touch blir det mer än 'bara apelsinjuice'.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">vodka</span><span class="ing-amount" style="color:#B8935A">50 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#B8935A">150 ml</span></div></div>
+      <p class="orig-note">Sägs ha fått sitt namn av amerikanska oljearbetare som rörde om drinken med en skruvmejsel.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="38" data-cat="Bär &amp; Frukt" data-name="mimosa">
+  <summary>
+    <span class="bar" style="background:#E8C24A"></span>
+    <span class="emoji">🥂</span>
+    <span class="head">
+      <span class="dname">Mimosa</span>
+      <span class="dcat" style="color:#C4547A">Bär &amp; Frukt</span>
+      <span class="dglass">🥃 Champagneglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">mousserande äppeljuice (kall)</span><span class="ing-amount" style="color:#E8C24A">100 ml</span></div><div class="ing-row"><span class="ing-name">färskpressad apelsinjuice (kall)</span><span class="ing-amount" style="color:#E8C24A">100 ml</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8C24A22;border-color:#E8C24A55;color:#E8C24A">1</div><p class="step-text">Kyl båda juicerna ordentligt.</p></div><div class="step-row"><div class="step-num" style="background:#E8C24A22;border-color:#E8C24A55;color:#E8C24A">2</div><p class="step-text">Häll apelsinjuicen i ett champagneglas.</p></div><div class="step-row"><div class="step-num" style="background:#E8C24A22;border-color:#E8C24A55;color:#E8C24A">3</div><p class="step-text">Toppa försiktigt med mousserande äppeljuice.</p></div><div class="step-row"><div class="step-num" style="background:#E8C24A22;border-color:#E8C24A55;color:#E8C24A">4</div><p class="step-text">Rör ett halvt varv — klart.</p></div></div>
+    <div class="tip" style="border:1px solid #E8C24A33;border-left:3px solid #E8C24A">
+      <p class="tip-label" style="color:#E8C24A">💡 Tips</p>
+      <p class="tip-text">Lika delar är regeln. Allt handlar om att båda ingredienserna är iskalla.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">champagne eller cava</span><span class="ing-amount" style="color:#B8935A">100 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#B8935A">100 ml</span></div></div>
+      <p class="orig-note">Ritz Paris, 1925. Uppkallad efter mimosablommans gula färg. Brunchens okrönta drottning.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="39" data-cat="Tropisk" data-name="singapore sling">
+  <summary>
+    <span class="bar" style="background:#E85A6A"></span>
+    <span class="emoji">🦁</span>
+    <span class="head">
+      <span class="dname">Singapore Sling</span>
+      <span class="dcat" style="color:#E8A038">Tropisk</span>
+      <span class="dglass">🥃 Highball / Slingglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">ananasjuice</span><span class="ing-amount" style="color:#E85A6A">80 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#E85A6A">25 ml</span></div><div class="ing-row"><span class="ing-name">grenadine</span><span class="ing-amount" style="color:#E85A6A">15 ml</span></div><div class="ing-row"><span class="ing-name">körsbärssaft eller -sylt (upplöst)</span><span class="ing-amount" style="color:#E85A6A">10 ml</span></div><div class="ing-row"><span class="ing-name">sodavatten</span><span class="ing-amount" style="color:#E85A6A">60 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E85A6A">1 näve</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E85A6A22;border-color:#E85A6A55;color:#E85A6A">1</div><p class="step-text">Shaka ananasjuice, limejuice, grenadine och körsbärssaft med is.</p></div><div class="step-row"><div class="step-num" style="background:#E85A6A22;border-color:#E85A6A55;color:#E85A6A">2</div><p class="step-text">Sila ner i ett högt glas med is.</p></div><div class="step-row"><div class="step-num" style="background:#E85A6A22;border-color:#E85A6A55;color:#E85A6A">3</div><p class="step-text">Toppa med sodavatten.</p></div><div class="step-row"><div class="step-num" style="background:#E85A6A22;border-color:#E85A6A55;color:#E85A6A">4</div><p class="step-text">Garnera med en ananasbit och ett cocktailkörsbär.</p></div></div>
+    <div class="tip" style="border:1px solid #E85A6A33;border-left:3px solid #E85A6A">
+      <p class="tip-label" style="color:#E85A6A">💡 Tips</p>
+      <p class="tip-text">Körsbärssylt utrörd i lite varmt vatten ersätter cherry brandy förvånansvärt bra.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">gin</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">cherry brandy</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">ananasjuice</span><span class="ing-amount" style="color:#B8935A">120 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div><div class="ing-row"><span class="ing-name">vardera Cointreau, Bénédictine, grenadine</span><span class="ing-amount" style="color:#B8935A">7,5 ml</span></div><div class="ing-row"><span class="ing-name">Angostura bitters</span><span class="ing-amount" style="color:#B8935A">Stänk</span></div></div>
+      <p class="orig-note">Raffles Hotel, Singapore, ca 1915. En av världens mest komplexa klassiker med sina 8+ ingredienser.</p>
+    </div>
+  </div>
+</details>
+<details class="drink" data-id="40" data-cat="Tropisk" data-name="bahama mama">
+  <summary>
+    <span class="bar" style="background:#E8762A"></span>
+    <span class="emoji">🌴</span>
+    <span class="head">
+      <span class="dname">Bahama Mama</span>
+      <span class="dcat" style="color:#E8A038">Tropisk</span>
+      <span class="dglass">🥃 Hurricanglas</span>
+    </span>
+    <span class="badges"><span class="tested-badge" hidden>✓</span><span class="stars-badge"></span></span>
+    <span class="chev">▾</span>
+  </summary>
+  <div class="body">
+    <div class="track">
+      <button class="tested-btn" type="button">✓ Testad</button>
+      <div class="rating" role="group" aria-label="Betyg 1–5">
+        <button class="star" data-v="1" type="button">★</button><button class="star" data-v="2" type="button">★</button><button class="star" data-v="3" type="button">★</button><button class="star" data-v="4" type="button">★</button><button class="star" data-v="5" type="button">★</button>
+      </div>
+    </div>
+    <p class="label">Ingredienser</p>
+    <div class="ing-box"><div class="ing-row"><span class="ing-name">ananasjuice</span><span class="ing-amount" style="color:#E8762A">80 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#E8762A">60 ml</span></div><div class="ing-row"><span class="ing-name">kokosmjölk</span><span class="ing-amount" style="color:#E8762A">40 ml</span></div><div class="ing-row"><span class="ing-name">grenadine</span><span class="ing-amount" style="color:#E8762A">15 ml</span></div><div class="ing-row"><span class="ing-name">limejuice</span><span class="ing-amount" style="color:#E8762A">10 ml</span></div><div class="ing-row"><span class="ing-name">is</span><span class="ing-amount" style="color:#E8762A">2 nävar</span></div></div>
+    <p class="label">Gör så här</p>
+    <div class="steps"><div class="step-row"><div class="step-num" style="background:#E8762A22;border-color:#E8762A55;color:#E8762A">1</div><p class="step-text">Skaka eller mixa alla ingredienser utom grenadinen med is.</p></div><div class="step-row"><div class="step-num" style="background:#E8762A22;border-color:#E8762A55;color:#E8762A">2</div><p class="step-text">Häll upp i ett stort glas.</p></div><div class="step-row"><div class="step-num" style="background:#E8762A22;border-color:#E8762A55;color:#E8762A">3</div><p class="step-text">Droppa grenadinen ovanpå så den sjunker och skapar en solnedgångseffekt.</p></div><div class="step-row"><div class="step-num" style="background:#E8762A22;border-color:#E8762A55;color:#E8762A">4</div><p class="step-text">Garnera med ananas och körsbär — gärna ett parasoll!</p></div></div>
+    <div class="tip" style="border:1px solid #E8762A33;border-left:3px solid #E8762A">
+      <p class="tip-label" style="color:#E8762A">💡 Tips</p>
+      <p class="tip-text">Blendad med is blir den en perfekt frozen sommardrink. Parasollet är obligatoriskt.</p>
+    </div>
+    <div class="orig">
+      <p class="label" style="color:#B8935A">🥃 Originalet — med alkohol</p>
+      <div class="ing-box orig-box"><div class="ing-row"><span class="ing-name">mörk rom</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">kokosrom (Malibu)</span><span class="ing-amount" style="color:#B8935A">30 ml</span></div><div class="ing-row"><span class="ing-name">ananasjuice</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">apelsinjuice</span><span class="ing-amount" style="color:#B8935A">60 ml</span></div><div class="ing-row"><span class="ing-name">grenadine</span><span class="ing-amount" style="color:#B8935A">15 ml</span></div></div>
+      <p class="orig-note">Bahamas turistklassiker från 1960-talet — tikikulturens soliga och söta ansikte.</p>
+    </div>
+  </div>
+</details>
+</main>
+
+<footer>
+  <p class="f-label">🍯 Sockerlag — grundrecept</p>
+  <p class="f-text">Lika delar socker och vatten. Värm på spisen under omrörning tills sockret löst sig. Låt svalna, häll på flaska. Håller 2–3 veckor i kylskåpet.</p>
+</footer>
+
+<footer>
+  <p class="f-label">🌱 Veganskt — att tänka på</p>
+  <p class="f-text">Alla mocktail-recept är veganska. Kolla dock etiketten på cocktailkörsbär och grenadine — undvik färgämnet karmin (E120) som är animaliskt. De flesta märken i svenska butiker använder växtbaserad färg.</p>
+</footer>
+
+<script>
+// Innehållet är statiskt och syns utan JavaScript.
+// JS ger sök, filter och sparade betyg (lagras lokalt i webbläsaren via localStorage).
+(function() {
+  var KEY = "mocktails-tracker-v1";
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY)) || {}; } catch(e) { state = {}; }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+  }
+
+  var drinksEls = document.querySelectorAll("details.drink");
+  var total = drinksEls.length;
+
+  function updateProgress() {
+    var tested = 0, sum = 0, rated = 0;
+    Object.keys(state).forEach(function(k) {
+      if (state[k].tested) tested++;
+      if (state[k].rating) { sum += state[k].rating; rated++; }
+    });
+    var txt = "✓ " + tested + " av " + total + " testade";
+    if (rated > 0) txt += " · snittbetyg " + (sum/rated).toFixed(1) + " ★";
+    document.getElementById("progress").textContent = txt;
+  }
+
+  function render(el) {
+    var id = el.dataset.id;
+    var s = state[id] || {};
+    el.querySelector(".tested-btn").classList.toggle("on", !!s.tested);
+    el.querySelector(".tested-btn").textContent = s.tested ? "✓ Testad!" : "✓ Testad";
+    el.querySelector(".tested-badge").hidden = !s.tested;
+    el.querySelectorAll(".star").forEach(function(st) {
+      st.classList.toggle("on", s.rating >= parseInt(st.dataset.v));
+    });
+    el.querySelector(".stars-badge").textContent = s.rating ? "★".repeat(s.rating) : "";
+  }
+
+  drinksEls.forEach(function(el) {
+    var id = el.dataset.id;
+    render(el);
+
+    el.querySelector(".tested-btn").addEventListener("click", function() {
+      state[id] = state[id] || {};
+      state[id].tested = !state[id].tested;
+      save(); render(el); updateProgress();
+    });
+
+    el.querySelectorAll(".star").forEach(function(st) {
+      st.addEventListener("click", function() {
+        var v = parseInt(st.dataset.v);
+        state[id] = state[id] || {};
+        // Klicka samma stjärna igen för att ta bort betyget
+        state[id].rating = (state[id].rating === v) ? 0 : v;
+        if (state[id].rating > 0) state[id].tested = true;
+        save(); render(el); updateProgress();
+      });
+    });
+  });
+
+  // Sök + filter
+  var active = "Alla";
+  var searchEl = document.getElementById("search");
+  var btns = document.querySelectorAll(".filter-btn");
+
+  function apply() {
+    var q = searchEl.value.toLowerCase();
+    drinksEls.forEach(function(el) {
+      var s = state[el.dataset.id] || {};
+      var okCat;
+      if (active === "Alla") okCat = true;
+      else if (active === "__tested") okCat = !!s.tested;
+      else if (active === "__untested") okCat = !s.tested;
+      else okCat = (el.dataset.cat === active);
+      var okSearch = el.dataset.name.indexOf(q) !== -1;
+      el.classList.toggle("hidden", !(okCat && okSearch));
+    });
+  }
+
+  searchEl.addEventListener("input", apply);
+  btns.forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      active = btn.dataset.cat;
+      btns.forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      apply();
+    });
+  });
+
+  updateProgress();
+})();
+</script>
+</body>
+</html>
